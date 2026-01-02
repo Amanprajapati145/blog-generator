@@ -16,6 +16,7 @@ const PORT = process.env.PORT || 5000;
 
 const defaultOrigins = [
   "https://blog-generator-jet.vercel.app",
+  "https://blog-generator-g5r8.vercel.app",
   "http://localhost:3000",
 ];
 
@@ -27,7 +28,37 @@ const envOrigins = process.env.CORS_ORIGINS
 
 const allowedOrigins = [...new Set([...defaultOrigins, ...envOrigins])];
 
-app.use(cors({ origin: allowedOrigins, credentials: true }));
+// Enhanced CORS configuration
+app.use((req, res, next) => {
+  const origin = req.headers.origin || '';
+  if (allowedOrigins.includes(origin) || !origin) {
+    res.header('Access-Control-Allow-Origin', origin || '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.header('Access-Control-Allow-Credentials', 'true');
+  }
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
+  next();
+});
+
+app.use(cors({
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 app.use(cookieParser());
 app.use(express.json());
